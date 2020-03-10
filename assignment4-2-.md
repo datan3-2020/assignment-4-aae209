@@ -1,0 +1,319 @@
+Statistical assignment 4
+================
+\[add your name here\]
+\[add date here\]
+
+In this assignment you will need to reproduce 5 ggplot graphs. I supply
+graphs as images; you need to write the ggplot2 code to reproduce them
+and knit and submit a Markdown document with the reproduced graphs (as
+well as your .Rmd file).
+
+First we will need to open and recode the data. I supply the code for
+this; you only need to change the file paths.
+
+    ```r
+    library(tidyverse)
+    Data8 <- read_tsv("C:/Users/alhus/Desktop/Desktop/UKDA-6614-tab/tab/ukhls_w8/h_indresp.tab")
+    Data8 <- Data8 %>%
+        select(pidp, h_age_dv, h_payn_dv, h_gor_dv)
+    Stable <- read_tsv("C:/Users/alhus/Desktop/Desktop/UKDA-6614-tab/tab/ukhls_wx/xwavedat.tab")
+    Stable <- Stable %>%
+        select(pidp, sex_dv, ukborn, plbornc)
+    Data <- Data8 %>% left_join(Stable, "pidp")
+    rm(Data8, Stable)
+    Data <- Data %>%
+        mutate(sex_dv = ifelse(sex_dv == 1, "male",
+                           ifelse(sex_dv == 2, "female", NA))) %>%
+        mutate(h_payn_dv = ifelse(h_payn_dv < 0, NA, h_payn_dv)) %>%
+        mutate(h_gor_dv = recode(h_gor_dv,
+                         `-9` = NA_character_,
+                         `1` = "North East",
+                         `2` = "North West",
+                         `3` = "Yorkshire",
+                         `4` = "East Midlands",
+                         `5` = "West Midlands",
+                         `6` = "East of England",
+                         `7` = "London",
+                         `8` = "South East",
+                         `9` = "South West",
+                         `10` = "Wales",
+                         `11` = "Scotland",
+                         `12` = "Northern Ireland")) %>%
+        mutate(placeBorn = case_when(
+                ukborn  == -9 ~ NA_character_,
+                ukborn < 5 ~ "UK",
+                plbornc == 5 ~ "Ireland",
+                plbornc == 18 ~ "India",
+                plbornc == 19 ~ "Pakistan",
+                plbornc == 20 ~ "Bangladesh",
+                plbornc == 10 ~ "Poland",
+                plbornc == 27 ~ "Jamaica",
+                plbornc == 24 ~ "Nigeria",
+                TRUE ~ "other")
+        )
+    ```
+
+Reproduce the following graphs as close as you can. For each graph,
+write two sentences (not more\!) describing its main message.
+
+1.  Univariate distribution (20 points).
+    
+    ``` r
+    library(ggplot2)
+    view(Data)
+    
+      Data.1 <- Data %>%
+       filter(!is.na(h_payn_dv)) %>%
+    
+     ggplot(aes(x = h_payn_dv)) +
+        geom_freqpoly() +
+        xlab("Net monthly pay") +
+        ylab("Number of respondnets")
+    
+        Data.1
+    ```
+    
+    ![](assignment4-2-_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+    
+    ``` r
+    ## The graph shows that most respondents have a net monthly pay between £0 and £3000, with a peak at around £1500 and less respondents around this number, who both have more or less pay.
+    ## The graph shows that from £4000 and £8000 the number of people with this number with monthly pay is similar apart from a slight rise between £5000 and £6000.
+    ```
+
+2.  Line chart (20 points). The lines show the non-parametric
+    association between age and monthly earnings for men and women.
+    
+    ``` r
+    view(Data)
+    Data.m <- Data %>%
+            filter(sex_dv == "male") %>%
+            count(h_age_dv, h_payn_dv)
+    
+    Data.f <- Data %>%
+            filter(sex_dv == "female") %>%
+            count(h_age_dv, h_payn_dv)
+    
+    
+    
+    male <- Data.m %>%
+        ggplot(aes(h_age_dv, h_payn_dv)) + geom_smooth(model = lm)
+    
+    
+    
+    female <- Data.f %>%
+        ggplot(aes(h_age_dv, h_payn_dv)) + geom_smooth(model = lm)     
+    
+    
+    
+    
+    
+    
+    
+    p <- ggplot() + 
+      geom_smooth(data = Data.m, aes(x = h_age_dv, y = h_payn_dv), colour = "black" ,linetype = 2) +
+      geom_smooth(data = Data.f, aes(x = h_age_dv, y = h_payn_dv), colour = "black" ,linetype = 1) +
+      xlab('Age') +
+      ylab('Monthly earnings') +
+        xlim(15,65) 
+    
+    
+    ## Interpretation: The male monthly earnings is higher for the female monthly earnings for all age groups. However, the greatest differences are found between the ages 30 to 60, with a peak at around 45, while those under 25 show the most similarity in monthly earnings between the sexes.
+    ```
+
+3.  Faceted bar chart (20 points).
+    
+    ``` r
+     ## Note: Don't know how to fill the title###   
+    
+    ## How to label the y-axis
+    
+    
+    
+    Ban <- Data %>%
+        filter(placeBorn == "Bangladesh") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Bangladesh") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    Ind <- Data %>%
+        filter(placeBorn == "India") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("India") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    
+    Ire <- Data %>%
+        filter(placeBorn == "Ireland") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Ireland") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    
+    Jam <- Data %>%
+        filter(placeBorn == "Jamaica") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Jamaica") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    Nig <- Data %>%
+        filter(placeBorn == "Nigeria") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Nigeria") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    oth <- Data %>%
+        filter(placeBorn == "other") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("other") + theme(plot.title = element_text(hjust = 0.5)) +
+        theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+    
+    Pak <- Data %>%
+        filter(placeBorn == "Pakistan") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Pakistan") + theme(plot.title = element_text(hjust = 0.5)) 
+    
+    Pol <- Data %>%
+        filter(placeBorn == "Poland") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("Poland") + theme(plot.title = element_text(hjust = 0.5)) 
+    
+    UK <- Data %>%
+        filter(placeBorn == "UK") %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv, h_payn_dv) %>%
+        group_by(sex_dv) %>%
+        summarise(
+            pay = median(h_payn_dv, na.rm = TRUE)
+        ) %>%
+        ggplot(aes(sex_dv,pay)) + geom_bar(stat = "identity") + ylim(0,2000) + xlab("") + ylab("") +
+        ggtitle("UK",) + theme(plot.title = element_text(hjust = 0.5))
+    
+    
+    
+    
+    library(ggplot2)
+    library(ggpubr)
+    
+    
+      combo <-  ggarrange(Ban, Ind, Ire, Jam, Nig, oth, Pak, Pol, UK 
+          ,
+          ncol = 3, nrow = 3) + ylab("Median monthly net pay")
+    
+    
+      combo2 <-annotate_figure(combo,
+                left = text_grob("Median monthly net pay", color = "black", rot = 90),
+                bottom = text_grob("Sex", color = "black",
+                                     size = 15))
+    
+      combo2
+    ```
+    
+    ![](assignment4-2-_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+    
+    ``` r
+    ## Interpretation: Median monthly pay is higher for males than for females in their respective places of birth, with those born in Ireland showing the greatest visible difference in median monthly pay between the sexes.Those born in Ireland and Nigeria show a higher median monthly pay than the rest of those born in other countires, while those born in Bangladesh and Pakistan show a lower median monthly pay than those born in other countries.
+    ```
+
+4.  Heat map (20 points).
+    
+    ``` r
+       ## Creating the data set for the heatmap 
+    
+    heat.data <- Data %>%
+               select(placeBorn, h_age_dv, h_gor_dv) %>%
+                 filter(!is.na(placeBorn)) %>%
+                 filter(!is.na(h_age_dv)) %>%
+                 filter(!is.na(h_gor_dv)) %>%
+                 group_by(placeBorn, h_gor_dv)%>%
+                summarise(mean.sx = mean(h_age_dv, na.rm = TRUE))
+    
+    
+    ## Renaming to help with legend later
+    
+    heat.data <- heat.data  %>%
+    rename("Mean_age" = mean.sx)
+    
+    
+    ## Making the heatmap
+    
+    heatmap <- ggplot(data = heat.data, mapping = aes(x = h_gor_dv,
+                                                       y = placeBorn,
+                                                       fill = Mean_age)) +
+      geom_tile() +
+      xlab(label = "Region")  + ylab(label = "Country of Birth") +
+    
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+    heatmap
+    ```
+    
+    ![](assignment4-2-_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+    
+    ``` r
+    ## The graph shows the mean age to relatively low especially for those born in Poland, Nigeria and Bangladesh 
+    ## compared to the other groups in the regions while those born in the UK, Jamaica and India show a relatively
+    ## higher population, which could possibly due to recent immigration of younger, working-age migrants when 
+    ## compared to more established groups. The mean age for Wales, West Midlands and Yorkshire appears to be higher than the rest of the other groups.
+    ```
+
+5.  Population pyramid (20 points).
